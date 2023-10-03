@@ -1,0 +1,109 @@
+<process name="AMF_BP_TEST_SFTP_PROFILE">
+  <sequence name="Main_start">
+    <assign to="." from="DocToDOM(PrimaryDocument)"></assign>
+    <assign to="/ProcessData/Details/CLA" from="sci-get-property(&apos;amf&apos;,concat(&apos;SFTP_CLA&apos;,&apos;_&apos;,//UserType/text()))"></assign>
+    <operation name="Lightweight JDBC Adapter">
+      <participant name="LightweightJDBCAdapterQuery"/>
+      <output message="LightweightJDBCAdapterTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="param1" from="//ProfileName/text()"></assign>
+        <assign to="paramtype1">String</assign>
+        <assign to="pool">db2Pool</assign>
+        <assign to="query_type">SELECT</assign>
+        <assign to="result_name">Result</assign>
+        <assign to="row_name">Row</assign>
+        <assign to="sql">select PROFILE_ID  from SFTP_PROF where NAME = ?</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="DocToDOM(PrimaryDocument,&apos;false&apos;)"></assign>
+      </input>
+    </operation>
+
+    <operation name="SFTP Client Begin Session Service">
+      <participant name="SFTPClientBeginSession"/>
+      <output message="SFTPClientBeginSessionServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="ProfileId" from="//PROFILE_ID/text()"></assign>
+        <assign to="SFTPClientAdapter" from="//ProcessData/Details/CLA/text()"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation> 
+
+   <operation name="SFTP Client CD Service">
+      <participant name="SFTPClientCd"/>
+      <output message="SFTPClientCdServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+       <assign to="Directory" from="concat('/',//Directory/text())"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <operation name="SFTP Client End Session Service">
+      <participant name="SFTPClientEndSession"/>
+      <output message="SFTPClientEndSessionServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+    <operation name="Release Service">
+      <participant name="ReleaseService"/>
+      <output message="ReleaseServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="TARGET">PrimaryDocument</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <assign to="Result/Output/Status">SFTP Connection successful</assign>
+    <assign to="." from="DOMToDoc(/ProcessData/Result/Output,&apos;PrimaryDocument&apos;)"></assign>
+    <operation name="HTTP Respond Service">
+      <participant name="HttpRespond"/>
+      <output message="HttpRespondServiceInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="doc-has-headers">false</assign>
+        <assign to="status-code">200</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+    <onFault>
+	<sequence name="Onfault_start">
+      <operation name="Release Service">
+      <participant name="ReleaseService"/>
+      <output message="ReleaseServiceTypeInputMessage">
+        <assign to="." from="*"></assign>
+        <assign to="TARGET">PrimaryDocument</assign>
+      </output>
+      <input message="inmsg">
+        <assign to="." from="*"></assign>
+      </input>
+    </operation>
+
+<assign to="Failed_Reason/Status/ServiceError" from="/ProcessData/ErrorMessage/text()"></assign>
+        <assign to="Failed_Reason/Status/Error_Message" append="true" >SFTP Connection Failed</assign>
+        <assign to="." from="DOMToDoc(/ProcessData/Failed_Reason,&apos;PrimaryDocument&apos;)"></assign>
+      <operation name="HTTP Respond Service">
+        <participant name="HttpRespond"/>
+        <output message="HttpRespondServiceInputMessage">
+          <assign to="." from="*"></assign>
+          <assign to="doc-has-headers">false</assign>
+          <assign to="status-code">200</assign>
+        </output>
+        <input message="inmsg">
+          <assign to="." from="*"></assign>
+        </input>
+      </operation>
+</sequence>
+    </onFault>
+  </sequence>
+</process>
